@@ -1,0 +1,54 @@
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
+
+#define PARAM_SECURITY 128
+#define PARAM_LABEL "mqom-251-L1-tprs-ext"
+
+#ifdef PARAM_SEL1
+#define PARAM_SELECTOR_DEGREE 1
+#define PARAM_CIRCUIT_DEPTH 2
+#define PARAM_NB_EXECUTIONS 19
+#endif
+#ifdef PARAM_SEL2
+#define PARAM_SELECTOR_DEGREE 2
+#define PARAM_CIRCUIT_DEPTH 2
+#define PARAM_NB_EXECUTIONS 19
+#endif
+#ifdef PARAM_SEL3
+#define PARAM_SELECTOR_DEGREE 3
+#define PARAM_CIRCUIT_DEPTH 3
+#define PARAM_NB_EXECUTIONS 20
+#endif
+#ifdef PARAM_SEL4
+#define PARAM_SELECTOR_DEGREE 4
+#define PARAM_CIRCUIT_DEPTH 4
+#define PARAM_NB_EXECUTIONS 22
+#endif
+
+// SD Parameters
+#define PARAM_FIELD_SIZE 251
+#define PARAM_q PARAM_FIELD_SIZE
+#define PARAM_n 43
+#define PARAM_m 43
+#define PARAM_MATRIX_BYTESIZE (((((PARAM_n*(PARAM_n+1))>>1)+127)>>7)<<7)
+
+// MPC Parameters
+#define PARAM_eta 16
+
+// MPCitH Parameters
+#define PARAM_NB_PARTIES PARAM_FIELD_SIZE
+#define PARAM_LOG_NB_PARTIES 8
+
+// Signature Parameters
+#define PARAM_SEED_SIZE (128/8)
+#define PARAM_SALT_SIZE (256/8)
+#define PARAM_DIGEST_SIZE (256/8)
+
+// Hash Domain Separation
+#define HASH_PREFIX_COMMITMENT 0
+#define HASH_PREFIX_FIRST_CHALLENGE 1
+#define HASH_PREFIX_SECOND_CHALLENGE 2
+#define HASH_PREFIX_THIRD_CHALLENGE 3
+#define HASH_PREFIX_SEED_TREE 4
+
+#endif /* PARAMETERS_H */

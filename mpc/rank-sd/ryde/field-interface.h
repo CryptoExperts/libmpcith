@@ -42,6 +42,9 @@ static inline void vec_from_bytes(vec_elt_t* x, const uint8_t* buf, uint32_t siz
     rbc_vec_from_string((rbc_vec) x, size/sizeof(rbc_elt), buf);
 }
 
+#define VEC_COMPRESSIBLE
+#define get_serialized_size(size)   (((size/sizeof(rbc_elt))*RYDE_PARAM_M+7)>>3)
+
 // Arithmetic over GF(2)
 #define sca_zero()   (0)
 #define sca_one()    (1)

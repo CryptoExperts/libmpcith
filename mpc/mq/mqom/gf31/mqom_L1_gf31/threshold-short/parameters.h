@@ -4,7 +4,7 @@
 #define PARAM_SECURITY 128
 #define PARAM_LABEL "mqom-31-L1-tcith-ggm-short"
 
-// SD Parameters
+// MQ Parameters
 #define PARAM_FIELD_SIZE 31
 #define PARAM_q PARAM_FIELD_SIZE
 #define PARAM_n 49

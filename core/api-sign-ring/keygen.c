@@ -1,0 +1,226 @@
+#include "keygen.h"
+
+#include <stdio.h>
+#include "rnd.h"
+
+int mpcith_setup_internal(mpcith_public_key_t* pp) {
+    // Sample the master seed, a seed to sample H and the secret key
+    uint8_t master_seed[PARAM_SEED_SIZE];
+    sample_seed(master_seed);
+    prg_context entropy_ctx;
+    prg_init(&entropy_ctx, master_seed, NULL);
+    samplable_t entropy = prg_to_samplable(&entropy_ctx);
+
+    generate_template_instance(&pp->inst, &entropy);
+    return 0;
+}
+
+int mpcith_keygen_internal(mpcith_public_key_t* pk, mpcith_secret_key_t* sk, const mpcith_public_key_t* pp) {
+    // Sample the master seed, a seed to sample H and the secret key
+    uint8_t master_seed[PARAM_SEED_SIZE];
+    sample_seed(master_seed);
+    prg_context entropy_ctx;
+    prg_init(&entropy_ctx, master_seed, NULL);
+    samplable_t entropy = prg_to_samplable(&entropy_ctx);
+
+    complete_template_instance(&sk->inst, &sk->wit, pp->inst, &entropy);
+    pk->inst = sk->inst;
+    return 0;
+}
+
+int mpcith_validate_keys_internal(const mpcith_public_key_t* pk, const mpcith_secret_key_t* sk) {
+    // Check the consistency between PK and SK
+    if(pk != NULL) {
+        if(!are_same_instances(pk->inst, sk->inst)) {
+            printf("Error: Values from PK are not consistent with SK.\n");
+            return -1;
+        }
+    }
+
+    // Check the consistency of the SK
+    return (is_correct_solution(sk->inst, sk->wit) == 0);
+}
+
+int mpcith_free_keys_internal(mpcith_public_key_t* pk, mpcith_secret_key_t* sk) {
+    if(sk != NULL) {
+        free_instance_solution(sk->wit);
+        free_instance(sk->inst);
+    }
+    if(pk != NULL) {
+        if(sk == NULL || (pk->inst != sk->inst))
+            free_instance(pk->inst);
+    }
+    return 0;
+}
+
+int mpcith_free_public_parameters(mpcith_public_key_t* pp) {
+    if(pp != NULL) {
+        free_instance(pp->inst);
+    }
+    return 0;
+}
+
+int deserialize_public_parameters(mpcith_public_key_t* pp, const uint8_t* buf, size_t buflen) {
+    if(pp == NULL || buf == NULL)
+        return -1;
+    
+    size_t bytes_expected = PARAM_TEMPLATE_INSTANCE_SIZE;
+    if (buflen < bytes_expected)
+        return -1;
+
+    pp->inst = deserialize_template_instance(buf);
+    return 0;
+}
+
+int serialize_public_parameters(uint8_t* buf, const mpcith_public_key_t* pp, size_t buflen) {
+    if(pp == NULL || buf == NULL)
+        return -1;
+    
+    size_t bytes_required = PARAM_TEMPLATE_INSTANCE_SIZE;
+    if (buflen < bytes_required)
+        return -1;
+
+    serialize_template_instance(buf, pp->inst);
+    return (int) bytes_required;
+}
+
+int deserialize_public_key(mpcith_public_key_t* key, const uint8_t* buf, size_t buflen) {
+    if(key == NULL || buf == NULL)
+        return -1;
+    
+    size_t bytes_expected = PARAM_INSTANCE_SIZE;
+    if (buflen < bytes_expected)
+        return -1;
+
+    key->inst = deserialize_instance(buf);
+    return 0;
+}
+
+int serialize_public_key(uint8_t* buf, const mpcith_public_key_t* key, size_t buflen) {
+    if(key == NULL || buf == NULL)
+        return -1;
+    
+    size_t bytes_required = PARAM_INSTANCE_SIZE;
+    if (buflen < bytes_required)
+        return -1;
+
+    serialize_instance(buf, key->inst);
+    return (int) bytes_required;
+}
+
+int deserialize_secret_key(mpcith_secret_key_t* key, const uint8_t* buf, size_t buflen) {
+    if(key == NULL || buf == NULL)
+        return -1;
+    
+    size_t bytes_expected = PARAM_INSTANCE_SIZE + PARAM_SOL_SIZE;
+    if (buflen < bytes_expected)
+        return -1;
+
+    key->inst = deserialize_instance(buf);
+    key->wit = deserialize_instance_solution(buf + PARAM_INSTANCE_SIZE);
+    return 0;
+}
+
+int serialize_secret_key(uint8_t* buf, const mpcith_secret_key_t* key, size_t buflen) {
+    if(key == NULL || buf == NULL)
+        return -1;
+    
+    size_t bytes_required = PARAM_INSTANCE_SIZE + PARAM_SOL_SIZE;
+    if (buflen < bytes_required)
+        return -1;
+
+    serialize_instance(buf, key->inst);
+    serialize_instance_solution(buf + PARAM_INSTANCE_SIZE, key->wit);
+    return (int) bytes_required;
+}
+
+int mpcith_setup(unsigned char *pp) {
+    mpcith_public_key_t ppp;
+    int ret = mpcith_setup_internal(&ppp);
+    if(ret) {
+        return ret;
+    }
+    ret = serialize_public_parameters(pp, &ppp, PARAM_TEMPLATE_INSTANCE_SIZE);
+    if(ret < 0) {
+        return ret;
+    }
+    mpcith_free_public_parameters(&ppp);
+    return 0;
+}
+
+int mpcith_keygen(unsigned char *pk, unsigned char *sk, const unsigned char* pp) {
+    int ret;
+
+    mpcith_public_key_t ppp;
+    ret = deserialize_public_parameters(&ppp, pp, PARAM_TEMPLATE_INSTANCE_SIZE);
+
+    mpcith_public_key_t ppk;
+    mpcith_secret_key_t ssk;
+    ret = mpcith_keygen_internal(&ppk, &ssk, &ppp);
+    if(ret) {
+        return ret;
+    }
+    ret = serialize_public_key(pk, &ppk, PARAM_INSTANCE_SIZE);
+    if(ret < 0) {
+        return ret;
+    }
+    ret = serialize_secret_key(sk, &ssk, PARAM_INSTANCE_SIZE + PARAM_SOL_SIZE);
+    if(ret < 0) {
+        return ret;
+    }
+
+#ifndef NDEBUG
+    // In debug mode, let us check if the key generation
+    //    produces valid key pair. 
+    ret = mpcith_validate_keys(pk, sk);
+    if(ret)
+        printf("Error: Pair (PK, SK) invalid.\n");
+#endif
+
+    mpcith_free_keys_internal(&ppk, &ssk);
+    mpcith_free_public_parameters(&ppp);
+    return 0;
+}
+
+int mpcith_validate_keys(const unsigned char *pk, const unsigned char *sk) {
+    int ret;
+
+    // Deserialize Secret Key
+    mpcith_secret_key_t ssk;
+    ret = deserialize_secret_key(&ssk, sk, PARAM_INSTANCE_SIZE + PARAM_SOL_SIZE);
+    if(ret < 0)
+        return -1;
+
+    // Serialize Secret Key
+    mpcith_public_key_t ppk;
+    if(pk != NULL) {
+        ret = deserialize_public_key(&ppk, pk, PARAM_INSTANCE_SIZE);
+        if (ret < 0) {
+            mpcith_free_keys_internal(NULL, &ssk);
+            return -1;
+        }
+    }
+
+    // Validate the key(s)
+    if(pk != NULL) {
+        ret = mpcith_validate_keys_internal(&ppk, &ssk);
+        mpcith_free_keys_internal(&ppk, &ssk);
+    } else {
+        ret = mpcith_validate_keys_internal(NULL, &ssk);
+        mpcith_free_keys_internal(NULL, &ssk);
+    }
+
+    return ret;
+}
+
+int crypto_rsign_setup(unsigned char* pp) {
+    return mpcith_setup(pp);
+}
+
+int crypto_rsign_keypair(unsigned char *pk, unsigned char *sk, const unsigned char* pp) {
+    return mpcith_keygen(pk, sk, pp);
+}
+
+int crypto_rsign_valid_keys(unsigned char *pk, unsigned char *sk) {
+    return mpcith_validate_keys(pk, sk);
+}

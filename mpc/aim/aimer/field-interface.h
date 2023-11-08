@@ -47,13 +47,16 @@ static inline void vec_rnd_x4(vec_elt_t* const* x, uint32_t size, samplable_x4_t
 static inline void vec_to_bytes(uint8_t* buf, const vec_elt_t* x, uint32_t size) {
     // We assume that all received vectors will be vectors of GF
     for(uint32_t i=0; i<size/sizeof(GF); i++)
-        GF_to_bytes(((GF*) x)[i], buf+i*sizeof(GF));
+        GF_to_bytes(((GF*) x)[i], buf+i*(NUMBITS_FIELD>>3));
 }
 static inline void vec_from_bytes(vec_elt_t* x, const uint8_t* buf, uint32_t size) {
     // We assume that all received vectors will be vectors of GF
     for(uint32_t i=0; i<size/sizeof(GF); i++)
-        GF_from_bytes(buf+i*sizeof(GF), ((GF*) x)[i]);
+        GF_from_bytes(buf+i*(NUMBITS_FIELD>>3), ((GF*) x)[i]);
 }
+
+#define VEC_COMPRESSIBLE
+#define get_serialized_size(size)   ((size/sizeof(GF))*(NUMBITS_FIELD>>3))
 
 // Arithmetic over GF(2)
 #define sca_zero()   (0)

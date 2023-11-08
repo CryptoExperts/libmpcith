@@ -5,8 +5,9 @@
 
 typedef uint8_t vec_elt_t;
 
-inline void vec_setzero(vec_elt_t* vz, int size) { memset(vz, 0, size*sizeof(vec_elt_t)); }
-inline void vec_set(vec_elt_t* vz, const vec_elt_t* vx, int size) { memcpy(vz, vx, size*sizeof(vec_elt_t)); }
+static inline void vec_setzero(vec_elt_t* vz, int size) { memset(vz, 0, size*sizeof(vec_elt_t)); }
+static inline void vec_set(vec_elt_t* vz, const vec_elt_t* vx, int size) { memcpy(vz, vx, size*sizeof(vec_elt_t)); }
+static inline int vec_isequal(const vec_elt_t* vx, const vec_elt_t* vy, int size) { return (memcmp(vx, vy, size*sizeof(vec_elt_t)) == 0); }
 
 #define vec_add(x,y,size)           gf31_add_tab(x,y,size)
 #define vec_sub(x,y,size)           gf31_sub_tab(x,y,size)

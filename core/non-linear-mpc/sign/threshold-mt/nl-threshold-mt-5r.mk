@@ -1,0 +1,3 @@
+CURRENT_MODE_NAME:=TCITH_MT_EXTENDED
+MODE_LIST:= $(MODE_LIST) $(CURRENT_MODE_NAME)
+MODE_$(CURRENT_MODE_NAME)_PATH=api-sign,non-linear-mpc/sign/threshold-mt,trees/hash

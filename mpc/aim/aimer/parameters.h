@@ -70,7 +70,7 @@
     #endif
 
 #elif PARAM_SECURITY == 192
-    #define PARAM_SALT_SIZE (256/8)
+    #define PARAM_SALT_SIZE (384/8)
     #define PARAM_SEED_SIZE (192/8)
     #define PARAM_DIGEST_SIZE (384/8)
 
@@ -108,7 +108,7 @@
     #endif
 
 #elif PARAM_SECURITY == 256
-    #define PARAM_SALT_SIZE (256/8)
+    #define PARAM_SALT_SIZE (512/8)
     #define PARAM_SEED_SIZE (256/8)
     #define PARAM_DIGEST_SIZE (512/8)
 

@@ -25,12 +25,12 @@ else
 	CFLAGS += -g
 endif
 
-# Do we want to activate the benchmarks?
+# Do we want to activate the detailed benchmarks?
 ifneq (,$(filter 1,$(BENCH) $(LIBMPCITH_BENCHMARK)))
 	CFLAGS += -DBENCHMARK
 endif
 
-# Do we want to activate the benchmarks?
+# Do we want to activate the benchmark of the number of cycles?
 ifneq (,$(filter 1,$(BENCH_CYCLES) $(LIBMPCITH_BENCHMARK_CYCLES)))
 	CFLAGS += -DBENCHMARK_CYCLES
 endif
@@ -293,9 +293,19 @@ APP_KAT_CHECK_SRC=$(APP_PATH)/generator/PQCgenKAT_check.c $(APP_PATH)/generator/
 APP_KAT_CHECK_OBJ=$(patsubst %.c,%.o,$(APP_KAT_CHECK_SRC))
 
 ### Units
-UNITS_MPC_PATH=$(MPC_PATH)/units/5r
-UNITS_MPC_SRC=$(MPC_PATH)/units/5r/main.c $(MPC_PATH)/units/5r/witness.c $(MPC_PATH)/units/5r/vec.c $(MPC_PATH)/units/5r/mpc.c
-UNITS_MPC_OBJ=$(patsubst %.c,%.o,$(UNITS_MPC_SRC))
+MPC_UNITS_URI=$(foreach mode,$(SELECTED_MODES),$(MODE_$(mode)_MPC_UNITS_PATH))
+ifneq ($(MPC_UNITS_URI),)
+	MPC_UNITS_PATHS=$(call get_all_subpaths_from_uri,$(CORE_PATH),$(MPC_UNITS_URI))
+	MPC_UNITS_SRC=$(strip $(call get_source_files,$(MPC_UNITS_PATHS)))
+	MPC_UNITS_INCLUDE=$(patsubst %,-I%,$(MPC_UNITS_PATHS))
+else
+# No MPC units tests have been defined for the current MPCitH transformation
+	MPC_UNITS_SRC=
+	MPC_UNITS_INCLUDE=
+endif
+APP_INCLUDE:=$(APP_INCLUDE) -I$(APP_PATH)/units $(MPC_UNITS_INCLUDE)
+APP_MPC_UNITS_SRC=$(APP_PATH)/units/main.c $(MPC_UNITS_SRC)
+APP_MPC_UNITS_OBJ=$(call get_objects,$(APP_MPC_UNITS_SRC))
 
 ### All
 
@@ -327,7 +337,7 @@ all: check_config bench
 # Sanity checks and error message if not met
 check_config:
 ifeq ($(LIBMPCITH_SCHEME_PATH),)
-	$(error You did not set the scheme necessary environment variables! Please 'source' one of the configuration files (e.g. 'source mpc/mq/5r/config/submissions/hypercube-ref-gf251-l1' for the MQOM reference implementation on GF251 with hypercube optimization.))
+	$(error You did not set the scheme necessary environment variables! Please 'source' one of the configuration files (e.g. 'source mpc/mq/mqom/config/submissions/hypercube-ref-gf251-l1' for the MQOM reference implementation on GF251 with hypercube optimization.))
 endif
 
 # This target display the current configuration
@@ -364,6 +374,7 @@ print:
 	@echo "Core:"
 	@echo " - Paths: $(MODE_PATHS)"
 	@echo " - Sources: $(CORE_SRC)"
+	@echo " - MPC Units: $(MPC_UNITS_URI)"
 
 # This target display all the configuration files
 #   of the schemes implemented in the library
@@ -412,15 +423,18 @@ bench-read: $(APP_READ_BENCH_LIB_OBJ) $(SYM_OBJ) $(ARITH_OBJ) $(MPC_OBJ) $(CORE_
 #unit-sign: app/units/sign.o app/bench/timing.o $(INST_OBJ) $(KEYGEN_OBJ) $(MPC_OBJ) $(SIGN_OBJ) $(SYM_OBJ)
 #	$(CC) app/units/sign.o app/bench/timing.o $(INST_OBJ) $(KEYGEN_OBJ) $(MPC_OBJ) $(SIGN_OBJ) $(SYM_OBJ) $(CFLAGS) $(OTHERFLAGS) -L$(HASH_SOURCE_FOLDER) -lhash -L. -o unit-sign
 
-units-mpc: $(UNITS_MPC_OBJ) $(SYM_OBJ) $(ARITH_OBJ) $(MPC_OBJ) libhash
-	$(CC) $(UNITS_MPC_OBJ) $(SYM_OBJ) $(ARITH_OBJ) $(MPC_OBJ) $(ALL_FLAGS) $(LINKFLAGS) -L$(HASH_SOURCE_FOLDER) -L. -lhash -o $@
+units-mpc: $(APP_MPC_UNITS_OBJ) $(SYM_OBJ) $(ARITH_OBJ) $(MPC_OBJ) libhash
+ifeq ($(MPC_UNITS_URI),)
+	$(error No MPC unit tests have been defined for this MPCitH transformation.)
+endif
+	$(CC) $(APP_MPC_UNITS_OBJ) $(SYM_OBJ) $(ARITH_OBJ) $(MPC_OBJ) $(ALL_FLAGS) $(LINKFLAGS) -L$(HASH_SOURCE_FOLDER) -L. -lhash -o $@
 
 ## Cleaning
 clean:
 	rm -f $(SYM_OBJ) $(ARITH_OBJ) $(MPC_OBJ) $(CORE_OBJ)
 	rm -f $(APP_BENCH_LIB_OBJ) $(APP_RAW_BENCH_LIB_OBJ) $(APP_WRITE_BENCH_LIB_OBJ) $(APP_READ_BENCH_LIB_OBJ)
 	rm -f $(APP_BENCH_API_OBJ) $(APP_WRITE_BENCH_API_OBJ) $(APP_READ_BENCH_API_OBJ)
-	rm -f $(UNITS_MPC_OBJ) $(APP_KAT_MAIN_OBJ) $(APP_KAT_CHECK_OBJ)
+	rm -f $(APP_MPC_UNITS_OBJ) $(APP_KAT_MAIN_OBJ) $(APP_KAT_CHECK_OBJ)
 	rm -rf unit-*
 	rm -f bench bench-*
 	rm -f kat_gen kat_check

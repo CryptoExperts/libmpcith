@@ -25,6 +25,14 @@ typedef struct vec_broadcast_t {
     rbc_elt v;
 } vec_broadcast_t;
 
-#define PARAM_COMPRESSED_BR_SIZE (sizeof(vec_unif_t))
+#ifdef VEC_COMPRESSIBLE
+    #define PARAM_WIT_SHORT_SIZE (get_serialized_size(sizeof(vec_wit_t)/sizeof(vec_elt_t)))
+    #define PARAM_UNIF_SHORT_SIZE (get_serialized_size(sizeof(vec_unif_t)/sizeof(vec_elt_t)))
+    #define PARAM_CORR_SHORT_SIZE (get_serialized_size(sizeof(vec_corr_t)/sizeof(vec_elt_t)))
+    #define PARAM_BR_SHORT_SIZE (get_serialized_size(sizeof(vec_broadcast_t)/sizeof(vec_elt_t)))
+    #define PARAM_COMPRESSED_BR_SIZE (get_serialized_size(sizeof(vec_unif_t)/sizeof(vec_elt_t)))
+#else
+    #define PARAM_COMPRESSED_BR_SIZE (sizeof(vec_unif_t))
+#endif
 
 #endif /* MPC_STRUCT_H */
